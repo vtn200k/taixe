@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZOZO DRIVER - ĐỊNH VỊ CHUẨN</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        :root { --green: #00FF88; --orange: #FF8C00; --bg: #000000; --card: #1C1C1E; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        .status-bar { height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; font-size: 0.8rem; background: #000; z-index: 3000; }
+        #toast { position: fixed; top: 40px; left: 50%; transform: translateX(-50%) translateY(-100px); background: white; color: black; padding: 12px 25px; border-radius: 30px; font-weight: 800; transition: 0.5s; z-index: 4000; font-size: 0.9rem; }
+        #toast.active { transform: translateX(-50%) translateY(0); }
+        .page { display: none; height: calc(100vh - 30px); padding: 15px; flex-direction: column; animation: slideIn 0.3s ease; }
+        .active-page { display: flex; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .logo-text { font-size: 2.2rem; font-weight: 900; text-align: center; padding: 10px 0; }
+        .logo-text .green { color: var(--green); }
+        .logo-text .orange { color: var(--orange); }
+        .info-card { background: var(--card); padding: 15px; border-radius: 20px; border: 1px solid #333; margin-bottom: 10px; }
+        #map-box { width: 100%; flex: 1; border-radius: 25px; border: 1px solid #333; overflow: hidden; margin-bottom: 10px; position: relative; }
+        .km-badge { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 5px 12px; border-radius: 10px; color: var(--green); font-weight: 800; z-index: 1000; border: 1px solid var(--green); }
+        .btn { width: 100%; padding: 20px; border-radius: 20px; font-weight: 900; font-size: 1.2rem; border: none; cursor: pointer; }
+        .btn-orange { background: linear-gradient(135deg, #FF4B2B, #FF8C00); color: white; }
+        .btn-white { background: white; color: black; }
+        .btn-green { background: var(--green); color: black; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; z-index: 5000; padding: 15px; align-items: center; justify-content: center; overflow-y: auto; }
+        .ticket { background: white; color: black; border-radius: 25px; padding: 20px; width: 100%; max-width: 400px; }
+    </style>
+</head>
+<body>
+
+    <div class="status-bar">
+        <span id="sys-time">00:00</span>
+        <div><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></div>
+    </div>
+    <div id="toast">ZOZO Thông báo</div>
+
+    <div id="page-1" class="page active-page">
+        <div class="logo-text"><span class="green">ZO</span><span class="orange">ZO</span></div>
+        <div style="text-align:center; margin: 40px 0;">
+            <div style="font-size: 5rem; font-weight: 900; line-height: 1;" id="big-time">00:00</div>
+            <div style="color:var(--green); font-weight:700; margin-top:10px;">XIN CHÀO BÁC TÀI!</div>
+        </div>
+        <div class="info-card">
+            <b>TÀI XẾ: TRẦN VĂN VẺ</b><br><small style="color:#888;">PHƯƠNG TIỆN: 29H-555.55</small>
+        </div>
+        <button class="btn btn-orange" style="margin-top: auto;" onclick="startTrip()">BẮT ĐẦU HÀNH TRÌNH</button>
+    </div>
+
+    <div id="page-2" class="page">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <b id="live-id" style="color:var(--orange)">ID: ----</b>
+            <b id="live-money" style="color:var(--green); font-size: 1.3rem;">0 đ</b>
+        </div>
+        <div id="map-box">
+            <div class="km-badge" id="live-km">0.00 KM</div>
+            <div id="map" style="width:100%; height:100%;"></div>
+        </div>
+        <div class="info-card">
+            <small style="color:var(--green); font-weight:800">📍 ĐIỂM ĐÓN:</small>
+            <div id="addr-start" style="font-size:0.8rem; color:#aaa;">Đang lấy địa chỉ...</div>
+        </div>
+        <button class="btn btn-white" onclick="finishTrip()">ĐẾN NƠI - XUẤT VÉ</button>
+    </div>
+
+    <div class="overlay" id="bill-overlay">
+        <div class="ticket">
+            <div id="pdf-area">
+                <div style="text-align:center; border-bottom:1px dashed #ccc; padding-bottom:15px; margin-bottom:15px;">
+                    <div style="font-size:1.8rem; font-weight:900;"><span style="color:#00C851">ZO</span><span style="color:#FF8C00">ZO</span></div>
+                    <small id="b-id">#----</small>
+                </div>
+                <div style="font-size:0.85rem; line-height:1.8;">
+                    Đón tại: <b id="b-addr-start">---</b><br>
+                    Trả khách: <b id="b-addr-end">---</b><br>
+                    Cự ly: <b id="b-km" style="float:right">0 km</b><br>
+                    Ngày: <b id="b-time" style="float:right">--/--/--</b>
+                </div>
+                <div style="background:#000; color:#00FF88; padding:15px; text-align:center; font-size:2rem; font-weight:900; border-radius:15px; margin:15px 0;" id="b-price">0 đ</div>
+            </div>
+            <div style="text-align:center;"><img id="qr-img" src="" style="width:150px;"></div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn btn-white" style="font-size:0.9rem; padding:15px;" onclick="downloadPDF()">TẢI PDF</button>
+                <button class="btn btn-green" style="font-size:0.9rem; padding:15px;" onclick="sendReport()">BÁO CÁO</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- CẤU HÌNH ---
+    const API_URL = "https://script.google.com/macros/s/AKfycbyTNT9rzIIStLYBJnJ6LPtv18KiWEZ3JrK3k-Uf7D82i9iA85avgNoIYIk1Xm4OK5Lh/exec"; 
+    const GIA_CUOC = 15000; 
+    const STK = "0912345678"; 
+    const NGAN_HANG = "mbbank"; 
+    const BIEN_SO = "29H-555.55";
+    const TEN_TAI_XE = "TRẦN VĂN VẺ";
+
+    let map, marker, path, watchId, history = [], km = 0, tripID = "";
+    let addrStart = "", addrEnd = "";
+
+    function showToast(m) {
+        const t = document.getElementById('toast'); t.innerText = m;
+        t.classList.add('active'); setTimeout(()=>t.classList.remove('active'), 3000);
+    }
+
+    function updateTime() {
+        const now = new Date();
+        const h = now.getHours().toString().padStart(2,'0'), m = now.getMinutes().toString().padStart(2,'0');
+        document.getElementById('sys-time').innerText = h+":"+m;
+        if(document.getElementById('big-time')) document.getElementById('big-time').innerText = h+":"+m;
+    }
+    setInterval(updateTime, 1000); updateTime();
+
+    async function getAddress(lat, lon) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const data = await res.json();
+            return data.display_name.split(',').slice(0,3).join(',');
+        } catch(e) { return "Vị trí GPS"; }
+    }
+
+    async function startTrip() {
+        showToast("📡 ĐANG KHỞI TẠO GPS...");
+        tripID = Math.random().toString(36).substring(2, 6).toUpperCase();
+        
+        navigator.geolocation.getCurrentPosition(async p => {
+            const lat = p.coords.latitude, lon = p.coords.longitude;
+            addrStart = await getAddress(lat, lon);
+            
+            document.getElementById('page-1').classList.remove('active-page');
+            document.getElementById('page-2').classList.add('active-page');
+            document.getElementById('live-id').innerText = "ID: " + tripID;
+            document.getElementById('addr-start').innerText = addrStart;
+
+            // Gửi trạng thái Đang chạy
+            const startData = {
+                time: new Date().toLocaleString('vi-VN'),
+                tripID: tripID,
+                driver: TEN_TAI_XE,
+                plate: BIEN_SO,
+                addrStart: addrStart,
+                status: 'Đang chạy'
+            };
+            fetch(API_URL, {method:'POST', mode:'no-cors', body: JSON.stringify(startData)});
+
+            map = L.map('map', {zoomControl: false}).setView([lat, lon], 17);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            marker = L.marker([lat, lon]).addTo(map);
+            path = L.polyline([], {color: '#00FF88', weight: 6}).addTo(map);
+            history.push([lat, lon]);
+
+            watchId = navigator.geolocation.watchPosition(wp => {
+                const {latitude: nLat, longitude: nLon, accuracy} = wp.coords;
+                if(accuracy > 30) return; 
+                const lastPos = history[history.length-1];
+                const dist = L.latLng(lastPos[0], lastPos[1]).distanceTo(L.latLng(nLat, nLon));
+                if(dist > 5) {
+                    km += dist / 1000;
+                    history.push([nLat, nLon]);
+                    marker.setLatLng([nLat, nLon]);
+                    path.addLatLng([nLat, nLon]);
+                    map.panTo([nLat, nLon]);
+                    document.getElementById('live-km').innerText = km.toFixed(2) + " KM";
+                    document.getElementById('live-money').innerText = Math.round(km * GIA_CUOC).toLocaleString() + " đ";
+                }
+            }, null, {enableHighAccuracy: true});
+        }, () => alert("Hãy bật vị trí!"));
+    }
+
+    async function finishTrip() {
+        if(watchId) navigator.geolocation.clearWatch(watchId);
+        showToast("🏁 ĐẾN NƠI!");
+        
+        let tien = Math.round(km * GIA_CUOC);
+        document.getElementById('b-id').innerText = "#MÃ: " + tripID;
+        document.getElementById('b-km').innerText = km.toFixed(2) + " km";
+        document.getElementById('b-price').innerText = tien.toLocaleString() + " đ";
+        document.getElementById('b-addr-start').innerText = addrStart;
+        document.getElementById('b-time').innerText = new Date().toLocaleString('vi-VN');
+        document.getElementById('qr-img').src = `https://img.vietqr.io/image/${NGAN_HANG}-${STK}-compact.png?amount=${tien}&addInfo=ZOZO%20${tripID}`;
+        
+        document.getElementById('bill-overlay').style.display = 'flex';
+
+        navigator.geolocation.getCurrentPosition(async p => {
+            addrEnd = await getAddress(p.coords.latitude, p.coords.longitude);
+            document.getElementById('b-addr-end').innerText = addrEnd;
+        });
+    }
+
+    function sendReport() {
+        showToast("📡 ĐANG GỬI BÁO CÁO...");
+        const finalData = {
+            time: document.getElementById('b-time').innerText,
+            tripID: tripID,
+            driver: TEN_TAI_XE,
+            plate: BIEN_SO,
+            addrStart: addrStart,
+            addrEnd: addrEnd,
+            distance: km.toFixed(2),
+            price: Math.round(km * GIA_CUOC),
+            status: 'Hoàn thành',
+            history: JSON.stringify(history) // Gửi hành trình chi tiết
+        };
+        fetch(API_URL, {method:'POST', mode:'no-cors', body: JSON.stringify(finalData)}).then(() => {
+            alert("Đã gửi báo cáo thành công!");
+            location.reload();
+        });
+    }
+
+    function downloadPDF() {
+        const el = document.getElementById('pdf-area');
+        html2pdf().set({ margin: 10, filename: `ZOZO_${tripID}.pdf`, jsPDF: { format: 'a5' } }).from(el).save();
+    }
+</script>
+</body>
+</html>
