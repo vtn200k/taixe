@@ -55,8 +55,8 @@
             <div style="color:var(--green); font-size: 0.8rem; font-weight: 700;">TRẠM ĐIỀU HÀNH TÀI XẾ</div>
         </div>
         <div class="info-card">
-            <small style="color:#888;">TÀI XẾ:</small> <b>Lê Văn Cường</b><br>
-            <small style="color:#888;">XE:</small> <b>29C-333.33</b>
+            <small style="color:#888;">TÀI XẾ:</small> <b>Phạm Văn Dũng</b><br>
+            <small style="color:#888;">XE:</small> <b>30D-444.44</b>
         </div>
         <div class="controls">
             <button class="btn btn-orange" onclick="startTrip()">BẮT ĐẦU CHUYẾN</button>
@@ -105,21 +105,40 @@
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbx4z1xUk7TqlQoPXIf1RZfJOgYG0RdDguHWepHYsqEJqlHmUgpGiTxGJGdPd91NQst6/exec"; 
     const GIA_CUOC = 15000;
-    const BIEN_SO = "29C-333.33";
-    const TEN_TAI_XE = "Lê Văn Cường";
+    const BIEN_SO = "30D-444.44";
+    const TEN_TAI_XE = "Phạm Văn Dũng";
 
-    let map, marker, path, watchId, history = [], km = 0, tripID = "";
+    let map, marker, path, watchId, km = 0, tripID = "";
     let addrStart = "", addrEnd = "";
-    let currentLat, currentLng; // Lưu tọa độ hiện tại toàn cục
+    let currentLat, currentLng;
+    let lastPoint = null; 
+    let gpsBuffer = []; // Bộ đệm để làm mịn đường đi (giống Google Maps)
 
-    // Cập nhật tọa độ liên tục ngay khi mở app để sẵn sàng địa chỉ
+    // 1. CẬP NHẬT GIỜ HỆ THỐNG
+    setInterval(() => {
+        const now = new Date();
+        const timeStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+        document.getElementById('sys-time').innerText = timeStr;
+        if(document.getElementById('big-time')) document.getElementById('big-time').innerText = timeStr;
+    }, 1000);
+
+    // 2. LẤY VỊ TRÍ BAN ĐẦU KHI MỞ APP
     navigator.geolocation.getCurrentPosition(async p => {
         currentLat = p.coords.latitude;
         currentLng = p.coords.longitude;
+        lastPoint = L.latLng(currentLat, currentLng);
         addrStart = await getAddressText(currentLat, currentLng);
-        const startLabel = document.getElementById('addr-start');
-        if(startLabel) startLabel.innerText = addrStart;
-    });
+        if(document.getElementById('addr-start')) document.getElementById('addr-start').innerText = addrStart;
+    }, () => showToast("❌ LỖI: VUI LÒNG BẬT GPS"), {enableHighAccuracy: true});
+
+    // 3. HÀM LẤY ĐỊA CHỈ TỪ TỌA ĐỘ
+    async function getAddressText(lat, lon) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const data = await res.json();
+            return data.display_name.split(',').slice(0,3).join(',');
+        } catch(e) { return "Vị trí GPS (" + lat.toFixed(4) + ")"; }
+    }
 
     function showToast(m) {
         const t = document.getElementById('toast');
@@ -127,92 +146,93 @@
         t.classList.add('active'); setTimeout(()=>t.classList.remove('active'), 3000);
     }
 
-    function updateTime() {
-        const now = new Date();
-        const h = now.getHours().toString().padStart(2,'0'), m = now.getMinutes().toString().padStart(2,'0');
-        document.getElementById('sys-time').innerText = h+":"+m;
-        if(document.getElementById('big-time')) document.getElementById('big-time').innerText = h+":"+m;
-    }
-    setInterval(updateTime, 1000);
-
-    async function getAddressText(lat, lon) {
-        try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-            const data = await res.json();
-            // Lấy tên đường và quận huyện cho ngắn gọn
-            return data.display_name.split(',').slice(0,3).join(',');
-        } catch(e) { return "Vị trí GPS (" + lat.toFixed(4) + ")"; }
-    }
-
-    // SỬA LỖI: Gửi kèm addrStart để Sheet1 không bị "Đang xác định"
     function sendLiveGPS(lat, lon, status) {
         const payload = {
-            type: "LIVE", 
-            time: new Date().toLocaleString('vi-VN'),
-            tripID: tripID,
-            driver: TEN_TAI_XE,
-            plate: BIEN_SO,
-            lat: lat,
-            lng: lon,
-            addrStart: addrStart, // Gửi địa chỉ chữ lên ngay từ đầu
-            status: status
+            type: "LIVE", time: new Date().toLocaleString('vi-VN'),
+            tripID: tripID, driver: TEN_TAI_XE, plate: BIEN_SO,
+            lat: lat, lng: lon, addrStart: addrStart, status: status
         };
         fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
     }
 
-    async function startTrip() {
-        // KIỂM TRA ĐỊA CHỈ TRƯỚC KHI CHO CHẠY
-        if (!addrStart || addrStart.includes("...")) {
-            showToast("⚠️ ĐANG ĐỊNH VỊ... VUI LÒNG ĐỢI 2 GIÂY");
-            addrStart = await getAddressText(currentLat, currentLng);
-            return;
-        }
-
-        tripID = Math.random().toString(36).substring(2, 6).toUpperCase();
+    // 4. BẮT ĐẦU CHUYẾN ĐI (HÀM QUAN TRỌNG NHẤT)
+    function startTrip() {
+        if (!currentLat) { showToast("⚠️ ĐANG ĐỊNH VỊ... THỬ LẠI SAU 2 GIÂY"); return; }
         
+        tripID = Math.random().toString(36).substring(2, 6).toUpperCase();
         document.getElementById('page-1').classList.remove('active-page');
         document.getElementById('page-2').classList.add('active-page');
         document.getElementById('live-id').innerText = "ID: " + tripID;
-        document.getElementById('addr-start').innerText = addrStart;
 
-        // Gửi tọa độ đầu tiên kèm địa chỉ chuẩn
-        sendLiveGPS(currentLat, currentLng, "Đang chạy");
-
+        // Khởi tạo bản đồ mượt mà
         if(!map) {
-            map = L.map('map', {zoomControl: false, attributionControl: false}).setView([currentLat, currentLng], 16);
+            map = L.map('map', {zoomControl: false, attributionControl: false}).setView([currentLat, currentLng], 17);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             marker = L.marker([currentLat, currentLng]).addTo(map);
-            path = L.polyline([], {color: '#00FF88', weight: 5}).addTo(map);
+            
+            // Vẽ đường nét đậm, bo tròn góc như Google Maps
+            path = L.polyline([], {
+                color: '#00FF88', 
+                weight: 7, 
+                opacity: 0.9, 
+                lineJoin: 'round', 
+                lineCap: 'round',
+                smoothFactor: 1.5 
+            }).addTo(map);
         }
-        
-        history = [[currentLat, currentLng]];
-        km = 0;
 
+        km = 0;
+        gpsBuffer = []; 
+        lastPoint = L.latLng(currentLat, currentLng);
+        path.setLatLngs([lastPoint]);
+        sendLiveGPS(currentLat, currentLng, "Đang chạy");
+
+        // CHẾ ĐỘ THEO DÕI SIÊU MƯỢT
         watchId = navigator.geolocation.watchPosition(wp => {
-            const nLat = wp.coords.latitude, nLon = wp.coords.longitude;
-            currentLat = nLat; currentLng = nLon; // Cập nhật tọa độ mới nhất
+            const rawLat = wp.coords.latitude;
+            const rawLon = wp.coords.longitude;
+            const accuracy = wp.coords.accuracy;
+
+            // Lọc nhiễu: Bỏ qua nếu sai số > 25m (đang ở trong hầm/nhà)
+            if (accuracy > 25) return;
+
+            // Thuật toán Trung bình trượt: Lấy 3 điểm để tính 1 điểm chuẩn
+            gpsBuffer.push({lat: rawLat, lng: rawLon});
+            if (gpsBuffer.length > 3) gpsBuffer.shift(); 
             
-            const lastPos = history[history.length-1];
-            const dist = L.latLng(lastPos[0], lastPos[1]).distanceTo(L.latLng(nLat, nLon));
-            
-            if(dist > 20) { // Tăng lên 20m để tránh GPS bị nhảy lung tung
+            const avgLat = gpsBuffer.reduce((s, x) => s + x.lat, 0) / gpsBuffer.length;
+            const avgLon = gpsBuffer.reduce((s, x) => s + x.lng, 0) / gpsBuffer.length;
+            const smoothPoint = L.latLng(avgLat, avgLon);
+
+            const dist = lastPoint.distanceTo(smoothPoint);
+
+            // Chỉ vẽ và tính tiền nếu xe thực sự di chuyển (10m - 300m)
+            if(dist > 10 && dist < 300) { 
                 km += dist / 1000;
-                history.push([nLat, nLon]);
-                marker.setLatLng([nLat, nLon]);
-                path.addLatLng([nLat, nLon]);
-                map.panTo([nLat, nLon]);
+                lastPoint = smoothPoint;
+                currentLat = avgLat; currentLng = avgLon;
+
+                // Cập nhật lên bản đồ với hiệu ứng trượt
+                marker.setLatLng(smoothPoint);
+                path.addLatLng(smoothPoint);
+                map.panTo(smoothPoint, { animate: true, duration: 0.5 });
                 
                 document.getElementById('live-km').innerText = km.toFixed(2) + " KM";
                 document.getElementById('live-money').innerText = Math.round(km * GIA_CUOC).toLocaleString() + " đ";
                 
-                sendLiveGPS(nLat, nLon, "Đang chạy");
+                sendLiveGPS(avgLat, avgLon, "Đang chạy");
             }
-        }, null, {enableHighAccuracy: true});
+        }, null, {
+            enableHighAccuracy: true, 
+            maximumAge: 0, 
+            timeout: 10000
+        });
     }
 
+    // 5. KẾT THÚC CHUYẾN ĐI
     async function finishTrip() {
         if(watchId) navigator.geolocation.clearWatch(watchId);
-        showToast("🎯 ĐÃ ĐẾN NƠI - ĐANG LẤY ĐỊA CHỈ CUỐI...");
+        showToast("🎯 ĐÃ ĐẾN NƠI - ĐANG LẤY VỊ TRÍ CUỐI...");
         
         let tien = Math.round(km * GIA_CUOC);
         document.getElementById('b-id').innerText = "MÃ CHUYẾN: " + tripID;
@@ -220,42 +240,26 @@
         document.getElementById('b-price').innerText = tien.toLocaleString() + " đ";
         document.getElementById('b-addr-start').innerText = addrStart;
         
-        // Cập nhật ảnh QR thanh toán
         document.getElementById('qr-img').src = `https://img.vietqr.io/image/mbbank-0912345678-compact.png?amount=${tien}&addInfo=ZOZO%20${tripID}`;
         document.getElementById('bill-overlay').style.display = 'flex';
 
-        // Lấy địa chỉ kết thúc chính xác
         addrEnd = await getAddressText(currentLat, currentLng);
         document.getElementById('b-addr-end').innerText = addrEnd;
     }
 
     function sendReport() {
         const btn = document.getElementById('btn-final-send');
-        btn.disabled = true;
-        btn.innerText = "ĐANG GỬI...";
+        btn.disabled = true; btn.innerText = "ĐANG GỬI...";
         
         const finalData = {
-            type: "REPORT",
-            time: new Date().toLocaleString('vi-VN'),
-            tripID: tripID, 
-            driver: TEN_TAI_XE, 
-            plate: BIEN_SO,
-            addrStart: addrStart, 
-            addrEnd: addrEnd,
-            distance: km.toFixed(2), 
-            price: Math.round(km * GIA_CUOC),
-            status: 'Hoàn thành'
+            type: "REPORT", time: new Date().toLocaleString('vi-VN'), tripID: tripID, 
+            driver: TEN_TAI_XE, plate: BIEN_SO, addrStart: addrStart, addrEnd: addrEnd,
+            distance: km.toFixed(2), price: Math.round(km * GIA_CUOC), status: 'Hoàn thành'
         };
         
         fetch(API_URL, {method:'POST', mode:'no-cors', body: JSON.stringify(finalData)})
-        .then(() => {
-            alert("ĐÃ KẾT THÚC CHUYẾN ĐI!");
-            location.reload();
-        })
-        .catch(() => {
-            alert("Lỗi mạng! Thử lại...");
-            btn.disabled = false;
-        });
+        .then(() => { alert("ĐÃ KẾT THÚC & GỬI BÁO CÁO!"); location.reload(); })
+        .catch(() => { alert("Lỗi mạng!"); btn.disabled = false; });
     }
 </script>
 </body>
