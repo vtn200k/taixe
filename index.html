@@ -12,6 +12,52 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
+        /* Tối ưu hóa layout tổng thể */
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 10px;
+}
+
+/* Đưa bản đồ lên trên cùng và thu nhỏ lại */
+#map {
+    width: 90% !important;
+    height: 150px !important; /* Thu nhỏ chiều cao bản đồ */
+    border-radius: 15px;
+    margin-bottom: 10px;
+    order: -3; /* Đưa lên vị trí đầu tiên */
+}
+
+/* Khối thông tin điểm đón và các nút */
+.location-info, .action-buttons {
+    width: 90%;
+    margin-bottom: 10px;
+    order: -2; /* Nằm dưới bản đồ */
+    text-align: center;
+}
+
+/* Căn chỉnh chữ BẮT ĐẦU (hoặc trạng thái) */
+#status {
+    order: -1; /* Nằm ngay trên đồng hồ tiền */
+    margin-bottom: 5px;
+    font-size: 1.2em;
+    color: #00ff00;
+}
+
+/* Phần đồng hồ tiền và dữ liệu giữ nguyên ở dưới */
+.meter-container {
+    order: 1;
+    width: 100%;
+}
+
+/* Tùy chỉnh riêng cho phần Điểm Đón giống trong ảnh */
+.diem-don-container {
+    background: #1a1a1a;
+    border-radius: 10px;
+    padding: 10px;
+    border: 1px solid #333;
+}
         :root { --green: #00FF88; --orange: #FF8C00; --bg: #000000; --card: #1C1C1E; }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
