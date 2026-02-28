@@ -3,156 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZOZO DRIVER - ĐỊNH VỊ CHUẨN</title>
+    <title>ZOZO DRIVER - LIVE GPS</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
-        /* Tối ưu hóa layout tổng thể */
-body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 10px;
-}
-
-/* Đưa bản đồ lên trên cùng và thu nhỏ lại */
-#map {
-    width: 90% !important;
-    height: 150px !important; /* Thu nhỏ chiều cao bản đồ */
-    border-radius: 15px;
-    margin-bottom: 10px;
-    order: -3; /* Đưa lên vị trí đầu tiên */
-}
-
-/* Khối thông tin điểm đón và các nút */
-.location-info, .action-buttons {
-    width: 90%;
-    margin-bottom: 10px;
-    order: -2; /* Nằm dưới bản đồ */
-    text-align: center;
-}
-
-/* Căn chỉnh chữ BẮT ĐẦU (hoặc trạng thái) */
-#status {
-    order: -1; /* Nằm ngay trên đồng hồ tiền */
-    margin-bottom: 5px;
-    font-size: 1.2em;
-    color: #00ff00;
-}
-
-/* Phần đồng hồ tiền và dữ liệu giữ nguyên ở dưới */
-.meter-container {
-    order: 1;
-    width: 100%;
-}
-
-/* Tùy chỉnh riêng cho phần Điểm Đón giống trong ảnh */
-.diem-don-container {
-    background: #1a1a1a;
-    border-radius: 10px;
-    padding: 10px;
-    border: 1px solid #333;
-}
         :root { --green: #00FF88; --orange: #FF8C00; --bg: #000000; --card: #1C1C1E; }
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        .status-bar { height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; font-size: 0.8rem; background: #000; z-index: 3000; }
-        #toast { position: fixed; top: 40px; left: 50%; transform: translateX(-50%) translateY(-100px); background: white; color: black; padding: 12px 25px; border-radius: 30px; font-weight: 800; transition: 0.5s; z-index: 4000; font-size: 0.9rem; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; height: 100vh; overflow: hidden; }
+        
+        #toast { position: fixed; top: 45px; left: 50%; transform: translateX(-50%) translateY(-100px); background: #FFD700; color: black; padding: 10px 15px; border-radius: 12px; font-weight: 800; transition: 0.5s; z-index: 9999; font-size: 0.8rem; width: 85%; text-align: center; border: 2px solid #000; }
         #toast.active { transform: translateX(-50%) translateY(0); }
-        .page { display: none; height: calc(100vh - 30px); padding: 15px; flex-direction: column; animation: slideIn 0.3s ease; }
+
+        .status-bar { height: 25px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; font-size: 0.7rem; background: #000; }
+        
+        .page { display: none; padding: 10px 15px; flex-direction: column; height: calc(100vh - 25px); }
         .active-page { display: flex; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .logo-text { font-size: 2.2rem; font-weight: 900; text-align: center; padding: 10px 0; }
-        .logo-text .green { color: var(--green); }
-        .logo-text .orange { color: var(--orange); }
-        .info-card { background: var(--card); padding: 15px; border-radius: 20px; border: 1px solid #333; margin-bottom: 10px; }
-        #map-box { width: 50%; flex: 1; border-radius: 25px; border: 1px solid #333; overflow: hidden; margin-bottom: 10px; position: relative; }
-        .km-badge { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 5px 12px; border-radius: 10px; color: var(--green); font-weight: 800; z-index: 1000; border: 1px solid var(--green); }
-        .btn { width: 100%; padding: 20px; border-radius: 20px; font-weight: 900; font-size: 1.2rem; border: none; cursor: pointer; }
+        
+        .logo-text { font-size: 2rem; font-weight: 900; text-align: center; margin-bottom: 10px; }
+        .info-card { background: var(--card); padding: 12px; border-radius: 15px; border: 1px solid #333; margin-bottom: 10px; }
+
+        #map-box { width: 100%; height: 35vh; border-radius: 18px; border: 1px solid #333; overflow: hidden; margin-bottom: 10px; position: relative; }
+        .km-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 8px; color: var(--green); font-weight: 800; z-index: 1000; font-size: 0.8rem; border: 1px solid var(--green); }
+        
+        .controls { display: flex; flex-direction: column; gap: 8px; }
+        .btn { width: 100%; padding: 18px; border-radius: 18px; font-weight: 900; font-size: 1.1rem; border: none; cursor: pointer; }
         .btn-orange { background: linear-gradient(135deg, #FF4B2B, #FF8C00); color: white; }
         .btn-white { background: white; color: black; }
         .btn-green { background: var(--green); color: black; }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; z-index: 5000; padding: 15px; align-items: center; justify-content: center; overflow-y: auto; }
-        .ticket { background: white; color: black; border-radius: 25px; padding: 20px; width: 100%; max-width: 400px; }
+
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; z-index: 5000; padding: 15px; align-items: center; justify-content: center; }
+        .ticket { background: white; color: black; border-radius: 20px; padding: 15px; width: 100%; max-width: 380px; }
     </style>
 </head>
 <body>
 
+    <div id="toast"><i class="fas fa-satellite-dish"></i> <span id="toast-text">...</span></div>
+
     <div class="status-bar">
         <span id="sys-time">00:00</span>
-        <div><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></div>
+        <div><i class="fas fa-wifi"></i> GPS LIVE</div>
     </div>
-    <div id="toast">ZOZO Thông báo</div>
 
     <div id="page-1" class="page active-page">
-        <div class="logo-text"><span class="green">ZO</span><span class="orange">ZO</span></div>
-        <div style="text-align:center; margin: 40px 0;">
-            <div style="font-size: 5rem; font-weight: 900; line-height: 1;" id="big-time">00:00</div>
-            <div style="color:var(--green); font-weight:700; margin-top:10px;">XIN CHÀO BÁC TÀI!</div>
+        <div class="logo-text"><span style="color:var(--green)">ZO</span><span style="color:var(--orange)">ZO</span></div>
+        <div class="info-card" style="text-align:center;">
+            <div style="font-size: 3.5rem; font-weight: 900;" id="big-time">00:00</div>
+            <div style="color:var(--green); font-size: 0.8rem; font-weight: 700;">TRẠM ĐIỀU HÀNH TÀI XẾ</div>
         </div>
         <div class="info-card">
-            <b>TÀI XẾ: TRẦN VĂN VẺ</b><br><small style="color:#888;">PHƯƠNG TIỆN: 29H-555.55</small>
+            <small style="color:#888;">TÀI XẾ:</small> <b>Lê Văn Cường</b><br>
+            <small style="color:#888;">XE:</small> <b>29C-333.33</b>
         </div>
-        <button class="btn btn-orange" style="margin-top:100px;" onclick="startTrip()">BẮT ĐẦU HÀNH TRÌNH</button>
+        <div class="controls">
+            <button class="btn btn-orange" onclick="startTrip()">BẮT ĐẦU CHUYẾN</button>
+        </div>
     </div>
 
     <div id="page-2" class="page">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <b id="live-id" style="color:var(--orange)">ID: ----</b>
-            <b id="live-money" style="color:var(--green); font-size: 1.3rem;">0 đ</b>
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+            <b id="live-id" style="color:var(--orange); font-size:0.8rem;">ID: ----</b>
+            <b id="live-money" style="color:var(--green); font-size: 1.2rem;">0 đ</b>
         </div>
+        
         <div id="map-box">
             <div class="km-badge" id="live-km">0.00 KM</div>
-            <div id="map" style="width:90%; height:70%;"></div>
+            <div id="map" style="width:100%; height:100%;"></div>
         </div>
+
         <div class="info-card">
-            <small style="color:var(--green); font-weight:800">📍 ĐIỂM ĐÓN:</small>
-            <div id="addr-start" style="font-size:0.8rem; color:#aaa;">Đang lấy địa chỉ...</div>
+            <small style="color:var(--green); font-weight:800">📍 ĐANG DI CHUYỂN TỪ:</small>
+            <div id="addr-start" style="font-size:0.7rem; color:#ccc;">Đang xác định...</div>
         </div>
-        <button class="btn btn-white" onclick="finishTrip()">ĐẾN NƠI - XUẤT VÉ</button>
+
+        <div class="controls">
+            <button class="btn btn-white" onclick="finishTrip()">ĐẾN NƠI - XUẤT VÉ</button>
+        </div>
     </div>
 
     <div class="overlay" id="bill-overlay">
         <div class="ticket">
-            <div id="pdf-area">
-                <div style="text-align:center; border-bottom:1px dashed #ccc; padding-bottom:15px; margin-bottom:15px;">
-                    <div style="font-size:1.8rem; font-weight:900;"><span style="color:#00C851">ZO</span><span style="color:#FF8C00">ZO</span></div>
-                    <small id="b-id">#----</small>
-                </div>
-                <div style="font-size:0.85rem; line-height:1.8;">
-                    Đón tại: <b id="b-addr-start">---</b><br>
-                    Trả khách: <b id="b-addr-end">---</b><br>
-                    Cự ly: <b id="b-km" style="float:right">0 km</b><br>
-                    Ngày: <b id="b-time" style="float:right">--/--/--</b>
-                </div>
-                <div style="background:#000; color:#00FF88; padding:15px; text-align:center; font-size:2rem; font-weight:900; border-radius:15px; margin:15px 0;" id="b-price">0 đ</div>
+            <div style="text-align:center; border-bottom:1px dashed #ccc; padding-bottom:8px; margin-bottom:8px;">
+                <b style="font-size:1.2rem;">BIÊN NHẬN DỊCH VỤ</b><br>
+                <small id="b-id" style="color:#666;"></small>
             </div>
-            <div style="text-align:center;"><img id="qr-img" src="" style="width:150px;"></div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn btn-white" style="font-size:0.9rem; padding:15px;" onclick="downloadPDF()">TẢI PDF</button>
-                <button class="btn btn-green" style="font-size:0.9rem; padding:15px;" onclick="sendReport()">BÁO CÁO</button>
+            <div style="font-size:0.75rem; line-height:1.5;">
+                Từ: <b id="b-addr-start"></b><br>
+                Đến: <b id="b-addr-end">Đang lấy vị trí...</b><br>
+                Km: <b id="b-km"></b> | Phí: <b id="b-price" style="color:red; font-size:1.1rem;"></b>
+            </div>
+            <div style="text-align:center; margin:10px 0;"><img id="qr-img" src="" style="width:120px;"></div>
+            <div class="controls">
+                <button class="btn btn-green" id="btn-final-send" onclick="sendReport()">GỬI BÁO CÁO & KẾT THÚC</button>
             </div>
         </div>
     </div>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbxFZCZQNuw1TR3a21QtTJWLdjIvkZAzObKSNvagU4UXoRXQHQKItQ_U1MCUthMP7RId/exec"; 
-    const GIA_CUOC = 15000; 
-    const STK = "0912345678"; 
-    const NGAN_HANG = "mbbank"; 
-    const BIEN_SO = "29H-555.55";
-    const TEN_TAI_XE = "TRẦN VĂN VẺ";
+    const API_URL = "https://script.google.com/macros/s/AKfycbx4z1xUk7TqlQoPXIf1RZfJOgYG0RdDguHWepHYsqEJqlHmUgpGiTxGJGdPd91NQst6/exec"; 
+    const GIA_CUOC = 15000;
+    const BIEN_SO = "29C-333.33";
+    const TEN_TAI_XE = "Lê Văn Cường";
 
     let map, marker, path, watchId, history = [], km = 0, tripID = "";
     let addrStart = "", addrEnd = "";
+    let currentLat, currentLng; // Lưu tọa độ hiện tại toàn cục
+
+    // Cập nhật tọa độ liên tục ngay khi mở app để sẵn sàng địa chỉ
+    navigator.geolocation.getCurrentPosition(async p => {
+        currentLat = p.coords.latitude;
+        currentLng = p.coords.longitude;
+        addrStart = await getAddressText(currentLat, currentLng);
+        const startLabel = document.getElementById('addr-start');
+        if(startLabel) startLabel.innerText = addrStart;
+    });
 
     function showToast(m) {
-        const t = document.getElementById('toast'); t.innerText = m;
+        const t = document.getElementById('toast');
+        document.getElementById('toast-text').innerText = m;
         t.classList.add('active'); setTimeout(()=>t.classList.remove('active'), 3000);
     }
 
@@ -162,107 +133,129 @@ body {
         document.getElementById('sys-time').innerText = h+":"+m;
         if(document.getElementById('big-time')) document.getElementById('big-time').innerText = h+":"+m;
     }
-    setInterval(updateTime, 1000); updateTime();
+    setInterval(updateTime, 1000);
 
-    async function getAddress(lat, lon) {
+    async function getAddressText(lat, lon) {
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
             const data = await res.json();
+            // Lấy tên đường và quận huyện cho ngắn gọn
             return data.display_name.split(',').slice(0,3).join(',');
-        } catch(e) { return "Vị trí GPS"; }
+        } catch(e) { return "Vị trí GPS (" + lat.toFixed(4) + ")"; }
+    }
+
+    // SỬA LỖI: Gửi kèm addrStart để Sheet1 không bị "Đang xác định"
+    function sendLiveGPS(lat, lon, status) {
+        const payload = {
+            type: "LIVE", 
+            time: new Date().toLocaleString('vi-VN'),
+            tripID: tripID,
+            driver: TEN_TAI_XE,
+            plate: BIEN_SO,
+            lat: lat,
+            lng: lon,
+            addrStart: addrStart, // Gửi địa chỉ chữ lên ngay từ đầu
+            status: status
+        };
+        fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
     }
 
     async function startTrip() {
-        showToast("📡 ĐANG KHỞI TẠO GPS...");
+        // KIỂM TRA ĐỊA CHỈ TRƯỚC KHI CHO CHẠY
+        if (!addrStart || addrStart.includes("...")) {
+            showToast("⚠️ ĐANG ĐỊNH VỊ... VUI LÒNG ĐỢI 2 GIÂY");
+            addrStart = await getAddressText(currentLat, currentLng);
+            return;
+        }
+
         tripID = Math.random().toString(36).substring(2, 6).toUpperCase();
         
-        navigator.geolocation.getCurrentPosition(async p => {
-            const lat = p.coords.latitude, lon = p.coords.longitude;
-            addrStart = await getAddress(lat, lon);
-            
-            document.getElementById('page-1').classList.remove('active-page');
-            document.getElementById('page-2').classList.add('active-page');
-            document.getElementById('live-id').innerText = "ID: " + tripID;
-            document.getElementById('addr-start').innerText = addrStart;
+        document.getElementById('page-1').classList.remove('active-page');
+        document.getElementById('page-2').classList.add('active-page');
+        document.getElementById('live-id').innerText = "ID: " + tripID;
+        document.getElementById('addr-start').innerText = addrStart;
 
-            // Gửi trạng thái Đang chạy
-            const startData = {
-                time: new Date().toLocaleString('vi-VN'),
-                tripID: tripID,
-                driver: TEN_TAI_XE,
-                plate: BIEN_SO,
-                addrStart: addrStart,
-                status: 'Đang chạy'
-            };
-            fetch(API_URL, {method:'POST', mode:'no-cors', body: JSON.stringify(startData)});
+        // Gửi tọa độ đầu tiên kèm địa chỉ chuẩn
+        sendLiveGPS(currentLat, currentLng, "Đang chạy");
 
-            map = L.map('map', {zoomControl: false}).setView([lat, lon], 17);
+        if(!map) {
+            map = L.map('map', {zoomControl: false, attributionControl: false}).setView([currentLat, currentLng], 16);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            marker = L.marker([lat, lon]).addTo(map);
-            path = L.polyline([], {color: '#00FF88', weight: 6}).addTo(map);
-            history.push([lat, lon]);
+            marker = L.marker([currentLat, currentLng]).addTo(map);
+            path = L.polyline([], {color: '#00FF88', weight: 5}).addTo(map);
+        }
+        
+        history = [[currentLat, currentLng]];
+        km = 0;
 
-            watchId = navigator.geolocation.watchPosition(wp => {
-                const {latitude: nLat, longitude: nLon, accuracy} = wp.coords;
-                if(accuracy > 30) return; 
-                const lastPos = history[history.length-1];
-                const dist = L.latLng(lastPos[0], lastPos[1]).distanceTo(L.latLng(nLat, nLon));
-                if(dist > 5) {
-                    km += dist / 1000;
-                    history.push([nLat, nLon]);
-                    marker.setLatLng([nLat, nLon]);
-                    path.addLatLng([nLat, nLon]);
-                    map.panTo([nLat, nLon]);
-                    document.getElementById('live-km').innerText = km.toFixed(2) + " KM";
-                    document.getElementById('live-money').innerText = Math.round(km * GIA_CUOC).toLocaleString() + " đ";
-                }
-            }, null, {enableHighAccuracy: true});
-        }, () => alert("Hãy bật vị trí!"));
+        watchId = navigator.geolocation.watchPosition(wp => {
+            const nLat = wp.coords.latitude, nLon = wp.coords.longitude;
+            currentLat = nLat; currentLng = nLon; // Cập nhật tọa độ mới nhất
+            
+            const lastPos = history[history.length-1];
+            const dist = L.latLng(lastPos[0], lastPos[1]).distanceTo(L.latLng(nLat, nLon));
+            
+            if(dist > 20) { // Tăng lên 20m để tránh GPS bị nhảy lung tung
+                km += dist / 1000;
+                history.push([nLat, nLon]);
+                marker.setLatLng([nLat, nLon]);
+                path.addLatLng([nLat, nLon]);
+                map.panTo([nLat, nLon]);
+                
+                document.getElementById('live-km').innerText = km.toFixed(2) + " KM";
+                document.getElementById('live-money').innerText = Math.round(km * GIA_CUOC).toLocaleString() + " đ";
+                
+                sendLiveGPS(nLat, nLon, "Đang chạy");
+            }
+        }, null, {enableHighAccuracy: true});
     }
 
     async function finishTrip() {
         if(watchId) navigator.geolocation.clearWatch(watchId);
-        showToast("🏁 ĐẾN NƠI!");
+        showToast("🎯 ĐÃ ĐẾN NƠI - ĐANG LẤY ĐỊA CHỈ CUỐI...");
         
         let tien = Math.round(km * GIA_CUOC);
-        document.getElementById('b-id').innerText = "#MÃ: " + tripID;
+        document.getElementById('b-id').innerText = "MÃ CHUYẾN: " + tripID;
         document.getElementById('b-km').innerText = km.toFixed(2) + " km";
         document.getElementById('b-price').innerText = tien.toLocaleString() + " đ";
         document.getElementById('b-addr-start').innerText = addrStart;
-        document.getElementById('b-time').innerText = new Date().toLocaleString('vi-VN');
-        document.getElementById('qr-img').src = `https://img.vietqr.io/image/${NGAN_HANG}-${STK}-compact.png?amount=${tien}&addInfo=ZOZO%20${tripID}`;
         
+        // Cập nhật ảnh QR thanh toán
+        document.getElementById('qr-img').src = `https://img.vietqr.io/image/mbbank-0912345678-compact.png?amount=${tien}&addInfo=ZOZO%20${tripID}`;
         document.getElementById('bill-overlay').style.display = 'flex';
 
-        navigator.geolocation.getCurrentPosition(async p => {
-            addrEnd = await getAddress(p.coords.latitude, p.coords.longitude);
-            document.getElementById('b-addr-end').innerText = addrEnd;
-        });
+        // Lấy địa chỉ kết thúc chính xác
+        addrEnd = await getAddressText(currentLat, currentLng);
+        document.getElementById('b-addr-end').innerText = addrEnd;
     }
 
     function sendReport() {
-        showToast("📡 ĐANG GỬI BÁO CÁO...");
+        const btn = document.getElementById('btn-final-send');
+        btn.disabled = true;
+        btn.innerText = "ĐANG GỬI...";
+        
         const finalData = {
-            time: document.getElementById('b-time').innerText,
-            tripID: tripID,
-            driver: TEN_TAI_XE,
+            type: "REPORT",
+            time: new Date().toLocaleString('vi-VN'),
+            tripID: tripID, 
+            driver: TEN_TAI_XE, 
             plate: BIEN_SO,
-            addrStart: addrStart,
+            addrStart: addrStart, 
             addrEnd: addrEnd,
-            distance: km.toFixed(2),
+            distance: km.toFixed(2), 
             price: Math.round(km * GIA_CUOC),
-            status: 'Hoàn thành',
-            history: JSON.stringify(history) // Gửi hành trình chi tiết
+            status: 'Hoàn thành'
         };
-        fetch(API_URL, {method:'POST', mode:'no-cors', body: JSON.stringify(finalData)}).then(() => {
-            alert("Đã gửi báo cáo thành công!");
+        
+        fetch(API_URL, {method:'POST', mode:'no-cors', body: JSON.stringify(finalData)})
+        .then(() => {
+            alert("ĐÃ KẾT THÚC CHUYẾN ĐI!");
             location.reload();
+        })
+        .catch(() => {
+            alert("Lỗi mạng! Thử lại...");
+            btn.disabled = false;
         });
-    }
-
-    function downloadPDF() {
-        const el = document.getElementById('pdf-area');
-        html2pdf().set({ margin: 10, filename: `ZOZO_${tripID}.pdf`, jsPDF: { format: 'a5' } }).from(el).save();
     }
 </script>
 </body>
